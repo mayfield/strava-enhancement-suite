@@ -387,22 +387,6 @@ function StravaEnhancementSuite($, options) {
   // Hide feed entries
   $.always(function() {
     $('div.feed>.feed-entry').setInterval(function() {
-      // Match by CSS class
-      $.each([
-          ['hide_challenge_feed_entries', '.challenge']
-        , ['hide_goal_feed_entries', '.performance-goal-created']
-        , ['hide_promotion_feed_entries', '.promo']
-      ], function() {
-        var filter = this[1];
-
-        $.option(this[0], function() {
-          $('div.feed>.feed-entry')
-            .filter(filter)
-            .hide()
-            ;
-        });
-      });
-
       // Match by text
       $('div.feed>.min-view').each(function() {
         var elem = $(this);
@@ -440,20 +424,6 @@ function StravaEnhancementSuite($, options) {
         if (elem.nextUntil('.row.header').not('script').length === 0) {
           elem.hide();
         }
-      });
-
-      $.option('hide_invite_friends', function() {
-        $('div.feed>.feed-entry')
-          // Remove social buttons
-          .find('.share')
-            .hide()
-          .end()
-
-          // Remove "Premium" buttons
-          .find('.badge.premium')
-            .hide()
-          .end()
-          ;
       });
 
       $.always(function() {
