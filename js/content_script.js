@@ -23,5 +23,6 @@ chrome.storage.sync.get(null, function(items) {
         + 'new StravaEnhancementSuite(jQuery, ' + JSON.stringify(items) + ');'
       );
     });
+    inject('/js/analysis.js');
   });
 });

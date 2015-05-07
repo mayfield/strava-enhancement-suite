@@ -20,7 +20,10 @@
     }, {
       "matches": ["*://*.strava.com/*"],
       "run_at": "document_idle",
-      "css": ["css/overrides.css"]
+      "css": [
+        "css/overrides.css",
+        "css/analysis.css"
+      ]
     }
   ],
   "icons": {
@@ -41,7 +44,8 @@
     "tabs"
   ],
   "web_accessible_resources": [
-    "js/injected.js",
+    "js/*.js",
+    "css/*.css",
     "pages/options.js"
   ]
 }

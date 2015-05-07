@@ -1,0 +1,21 @@
+
+#critpower {
+    margin-top: 10px;
+}
+
+#critpower .group {
+    padding-bottom: 0;
+}
+
+#critpower table {
+    margin: 0;
+}
+
+#critpower td {
+    border: 0;
+    padding: 4px 0 4px 20px;
+}
+
+#critpower tr:nth-child(odd) {
+    background: #fafafa;
+}
