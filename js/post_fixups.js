@@ -1,10 +1,10 @@
-function StravaEnhancementSuite($, options) {
+function StravaEnhancementSuite($) {
   var defaults = {};
   $.each(StravaEnhancementSuiteOptions, function() {
     defaults[this.name] = this['default'];
   });
 
-  options = $.extend({}, defaults, options);
+  var options = $.extend({}, defaults, ses_user_config);
 
   $.fn.extend({
     onceOnly: function () {

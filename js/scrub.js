@@ -23,4 +23,3 @@ chrome.storage.sync.get(null, function(items) {
     style.appendChild(document.createTextNode(css));
     document.head.appendChild(style);
 });
-
