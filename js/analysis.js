@@ -83,9 +83,6 @@ function ses_analysis_start() {
                 ring.shift();
             }
             max = Math.max(rolling_sum / ring.length, max);
-            if (max == 507 && period > 300) { 
-                debugger;
-            }
         };
         return max;
     }
