@@ -3,7 +3,8 @@ function ses_analysis_start() {
 
     console.log('Starting SES Analysis Extention');
 
-    var cps = [
+    /* TODO: Move to user options. */
+    var CP_PERIODS = [
         ['5s', 5],
         ['15s', 10],
         ['30s', 30],
@@ -14,9 +15,10 @@ function ses_analysis_start() {
         ['15min', 900],
         ['20min', 1200],
         ['30min', 1800],
-        ['1hour', 3600],
-        ['2hour', 7200]
+        ['1hour', 3600]
     ];
+    /* Max gap-seconds to permit without zero-padding. */
+    var MAX_DATA_GAP = 5;
 
     var adjunct = function(run_after, obj, orig_func_name, interceptor) {
         var save_fn = obj.prototype[orig_func_name];
@@ -42,9 +44,33 @@ function ses_analysis_start() {
     var run_before = function(obj, orig_func_name, interceptor) {
         adjunct(false, obj, orig_func_name, interceptor);
     }
+
+    var RollingAvg = function(period) {
+        this.d = [];
+        this.period = period;
+        this.sum = 0;
+    };
+
+    RollingAvg.prototype.add = function(ts, value) {
+        this.d.push({ts: ts, value: value});
+        this.sum += value;
+        while (ts - this.d[0].ts >= this.period) {
+            this.sum -= this.d[0].value;
+            this.d.shift();
+        }
+    };
+
+    RollingAvg.prototype.avg = function() {
+        return this.sum / this.d.length;
+    };
+
+    RollingAvg.prototype.full = function() {
+        return this.d[this.d.length-1].ts - this.d[0].ts == (this.period - 1);
+    };
  
     var on_stream_data = function() {
         console.log("Parsing Watts Stream for Critical Power Chart");
+        var start = new Date;
         var streams = pageView.streams();
         var watts_stream = streams.getStream('watts');
         if (!watts_stream) {
@@ -55,35 +81,62 @@ function ses_analysis_start() {
         }
         var ts_stream = streams.getStream('time'); 
         document.getElementById('critpower').style.display = 'block';
-        cps.forEach(function(cp) {
-            var watts = critpower(ts_stream, watts_stream, cp[1]);
+        CP_PERIODS.forEach(function(cp) {
+            var watts = critpower_smart(ts_stream, watts_stream, cp[1]);
             var el = document.getElementById('cp-' + cp[1]);
-            if (watts === undefined) {
+            if (!watts) {
                 el.innerHTML = '<i>n/a</i>';
             } else {
-                el.innerHTML = Math.round(watts) + '&nbsp;watts';
+                el.innerHTML = Math.round(watts) + 'w';
             }
         });
     }
 
-    var critpower = function(ts_stream, watts_stream, period) {
-        var ring = [];
-        var rolling_sum = 0;
+    var critpower_wall = function(ts_stream, watts_stream, period) {
+        var ring = new RollingAvg(period);
         var max = 0;
-        if (ts_stream[ts_stream.length-1] - ts_stream[0] < period) {
-            return;
-        }
-        for (var i = 0, len = ts_stream.length; i < len; i++) {
+        var ts_size = ts_stream.length;
+        for (var i = 0; i < ts_size; i++) {
             var watts = watts_stream[i];
             var ts = ts_stream[i];
-            ring.push({ts: ts, watts: watts});
-            rolling_sum += watts;
-            while (ts - ring[0].ts >= period) {
-                rolling_sum -= ring[0].watts;
-                ring.shift();
+            ring.add(ts, watts);
+            if ((ring[ring.length-1].ts - ring[0].ts) / (ring.period-1) > 0.99) {
+                max = Math.max(ring.avg(), max);
             }
-            max = Math.max(rolling_sum / ring.length, max);
-        };
+        }
+        return max;
+    }
+
+    var critpower_sample = function(watts_stream, period) {
+        var ring = new RollingAvg(period);
+        for (var i = 0, max = 0, len = watts_stream.length; i < len; i++) {
+            ring.add(i, watts_stream[i]);
+            if (ring.full()) {
+                max = Math.max(ring.avg(), max);
+            }
+        }
+        return max;
+    }
+
+    var critpower_smart = function(ts_stream, watts_stream, period) {
+        var ring = new RollingAvg(period);
+        var max = 0;
+        var range = 0;
+        var ts_size = ts_stream.length;
+        for (var i = 0; i < ts_size; i++) {
+            var watts = watts_stream[i];
+            var ts = ts_stream[i];
+            var gap = i > 0 && ts - ts_stream[i-1];
+            if (gap > MAX_DATA_GAP) {
+                for (var ii = 1; ii < gap; ii++) {
+                    ring.add(ts_stream[i-1]+ii, 0);
+                }
+            }
+            ring.add(ts, watts);
+            if (ring.full()) {
+                max = Math.max(ring.avg(), max);
+            }
+        }
         return max;
     }
 
@@ -93,7 +146,7 @@ function ses_analysis_start() {
                 '<div class="title">Critical Power</div>',
                 '<table>'
     ];
-    cps.forEach(function(x) {
+    CP_PERIODS.forEach(function(x) {
         var r = ['<tr><td>', x[0], '</td><td id="cp-', x[1], '">...</td></tr>'];
         panel.push(r.join(''));
     });
