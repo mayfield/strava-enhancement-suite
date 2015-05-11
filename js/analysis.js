@@ -93,14 +93,19 @@ function ses_analysis_start() {
 
         var power_ctrl = pageView.powerController();
         if (power_ctrl) {
-            jQuery('.ses-stats').show();
-            var ftp = power_ctrl.get('athlete_ftp');
             var np = calc_np(watts_stream);
-            var if_ = np.value / ftp;
-            var tss = calc_tss(np, if_, ftp);
+            var ftp = power_ctrl.get('athlete_ftp');
+            if (!ftp) {
+                jQuery('.ses-if').parent().parent().hide();
+                jQuery('.ses-tss').parent().parent().hide();
+            } else {
+                var if_ = np.value / ftp;
+                var tss = calc_tss(np, if_, ftp);
+                jQuery('.ses-if').html(if_.toFixed(2));
+                jQuery('.ses-tss').html(Math.round(tss));
+            }
             jQuery('.ses-np').html(Math.round(np.value));
-            jQuery('.ses-if').html(if_.toFixed(2));
-            jQuery('.ses-tss').html(Math.round(tss));
+            jQuery('.ses-stats').show();
         } else {
             console.log("Skipping power stats for powerless activity.");
         }
