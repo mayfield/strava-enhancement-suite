@@ -80,7 +80,7 @@ function ses_analysis_start() {
             }
         }
         var ts_stream = streams.getStream('time'); 
-        document.getElementById('critpower').style.display = 'block';
+        jQuery('#critpower').show();
         CP_PERIODS.forEach(function(cp) {
             var watts = critpower_smart(ts_stream, watts_stream, cp[1]);
             var el = document.getElementById('cp-' + cp[1]);
@@ -90,32 +90,20 @@ function ses_analysis_start() {
                 el.innerHTML = Math.round(watts) + 'w';
             }
         });
-    }
 
-    var critpower_wall = function(ts_stream, watts_stream, period) {
-        var ring = new RollingAvg(period);
-        var max = 0;
-        var ts_size = ts_stream.length;
-        for (var i = 0; i < ts_size; i++) {
-            var watts = watts_stream[i];
-            var ts = ts_stream[i];
-            ring.add(ts, watts);
-            if ((ring[ring.length-1].ts - ring[0].ts) / (ring.period-1) > 0.99) {
-                max = Math.max(ring.avg(), max);
-            }
+        var power_ctrl = pageView.powerController();
+        if (power_ctrl) {
+            jQuery('.ses-stats').show();
+            var ftp = power_ctrl.get('athlete_ftp');
+            var np = calc_np(watts_stream);
+            var if_ = np.value / ftp;
+            var tss = calc_tss(np, if_, ftp);
+            jQuery('.ses-np').html(Math.round(np.value));
+            jQuery('.ses-if').html(if_.toFixed(2));
+            jQuery('.ses-tss').html(Math.round(tss));
+        } else {
+            console.log("Skipping power stats for powerless activity.");
         }
-        return max;
-    }
-
-    var critpower_sample = function(watts_stream, period) {
-        var ring = new RollingAvg(period);
-        for (var i = 0, max = 0, len = watts_stream.length; i < len; i++) {
-            ring.add(i, watts_stream[i]);
-            if (ring.full()) {
-                max = Math.max(ring.avg(), max);
-            }
-        }
-        return max;
     }
 
     var critpower_smart = function(ts_stream, watts_stream, period) {
@@ -140,6 +128,40 @@ function ses_analysis_start() {
         return max;
     }
 
+    var calc_np = function(watts_stream) {
+        var rolling_size = 30;
+        var total = 0;
+        var count = 0;
+        var index = 0;
+        var sum = 0;
+        var np = 0;
+        var rolling = new Uint16Array(rolling_size);
+        for (var i = 0; i < watts_stream.length; i++) {
+            var watts = watts_stream[i];
+            sum += watts;
+            sum -= rolling[index];
+            rolling[index] = watts;
+            total += Math.pow(sum / rolling_size, 4);
+            count++;
+            index = (index >= rolling_size - 1) ? 0 : index + 1;
+        }
+        np = count && Math.pow(total / count, 0.25);
+        return {
+            value: np,
+            count: count
+        };
+    };
+
+    /* NOTES:
+     * zones: pageView.power().
+     */
+    var calc_tss = function(np, if_, ftp) {
+        var norm_work = np.value * np.count;
+        var ftp_work_hour = ftp * 3600;
+        var raw_tss = norm_work * if_;
+        return raw_tss / ftp_work_hour * 100;
+    };
+
     var panel = [
         '<ul id="critpower" style="display: none;" class="pagenav">',
             '<li class="group">',
@@ -152,6 +174,33 @@ function ses_analysis_start() {
     });
     panel.push('</table></li></ul>');
     jQuery(panel.join('')).insertBefore('.actions-menu');
+
+    var ses_stats = [
+        '<ul style="display: none;" class="inline-stats section secondary-stats ses-stats">',
+            '<li>',
+                '<strong>',
+                    '<span class="ses-np">...</span>',
+                    '<abbr class="unit" title="watts">W</abbr>',
+                '</strong>',
+                '<div class="label">Normalized Power</div>',
+            '</li>',
+            '<li>',
+                '<strong>',
+                    '<span class="ses-if">...</span>',
+                    '<abbr class="unit" title="Intesity Factor">IF</abbr>',
+                '</strong>',
+                '<div class="label">Intensity Factor</div>',
+            '</li>',
+            '<li>',
+                '<strong>',
+                    '<span class="ses-tss">...</span>',
+                '</strong>',
+                '<div class="label">TSS</div>',
+            '</li>',
+        '</ul>'
+    ];
+
+    jQuery(ses_stats.join('')).insertAfter('.inline-stats.secondary-stats');
 
     pageView.streamsRequest.deferred.done(function() {
         on_stream_data();

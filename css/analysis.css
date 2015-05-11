@@ -19,3 +19,10 @@
 #critpower tr:nth-child(odd) {
     background: #fafafa;
 }
+
+.activity-stats .secondary-stats.inline-stats.ses-stats {
+    border: 2px solid #fc4c02;
+    border-left: 0;
+    border-right: 0;
+    background: #fff;
+}
