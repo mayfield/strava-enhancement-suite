@@ -1,5 +1,12 @@
-var StravaEnhancementSuiteOptions = [
-    {
+var StravaEnhancementSuiteOptions = [{
+    name: "ftp",
+    title: "Functional Threshold Power",
+    description: "An array of FTP wattage values over time.  These are used for computing TSS, IF, etc.", 
+    default: [{
+        start_ts: 0, /* epoch seconds */
+        watts: undefined
+    }]
+}, {
       "name": "repeated_segments"
     , "title": "Repeated segments"
     , "description": "Show aggregate segment data (fastest, slowest, average, total distance, total elevation, etc.) when segments are repeated within an activity."
